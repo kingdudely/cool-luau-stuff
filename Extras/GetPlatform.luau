@@ -1,86 +1,61 @@
 -- https://devforum.roblox.com/t/3772157
 
-local sub = string.sub
-local match = string.match
-local len = string.len
-local lower = string.lower
-
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 local VRService = game:GetService("VRService")
 local TextService = game:GetService("TextService")
 
-local TextSettings = {
-	16,
-	"SourceSans",
-	Vector2.one * 1000,
-}
-
--- char(2 ^ 16 - 1)
-local invalidSize = TextService:GetTextSize("\u{FFFF}", unpack(TextSettings))
-
-local function isValidCharacter(character)
-	local size = TextService:GetTextSize(character, unpack(TextSettings))
-	
-	return size.Magnitude ~= invalidSize.Magnitude
+local function getCharacterSize(characterCodepoint)
+	return TextService:GetTextSize(utf8.char(characterCodepoint), 16, Enum.Font.SourceSans, Vector2.new(1000, 1000))
 end
 
-local function getArchitecture()
-	local address = tonumber(sub(tostring{math.huge}, 8))
-
-	if len(tostring(address)) <= 10 then
-		return 32
-	end
-
-	return 64
+local invalidCharacterSize = getCharacterSize(0xFFFF)
+local function isValidCharacter(characterCodepoint)
+	local characterSize = getCharacterSize(characterCodepoint)
+	return characterSize ~= invalidCharacterSize
 end
 
-local function GetPlatform()
-	-- Implement Grapejuice and PS4/PS5 detection If you know how to pls tell me bro 🙏🙏
-	local version = version()
+return function()
+	local RobloxVersion = version()
+	local ButtonSelectImage = UserInputService:GetImageForKeyCode(Enum.KeyCode.ButtonSelect):lower()
 
-	local Desktop = match(version, "^0%.") ~= nil
-	local Console = GuiService:IsTenFootInterface() or (match(version, "^1%.") ~= nil)
-	local Mobile = match(version, "^2%.") ~= nil
-	local VR = UserInputService.VREnabled and VRService.VREnabled
-	
-	if GuiService.IsWindows then
-		if Mobile then
-			return Enum.Platform.UWP
-		elseif Console then -- Not sure if this works
-			return Enum.Platform.XBoxOne
-		elseif isValidCharacter("\u{E0FF}") then -- Not sure if this works either Lol (Ubuntu)
-			return Enum.Platform.Linux
-		end
+	local isDesktopClient = RobloxVersion:find("^0%.") ~= nil
+	local isConsoleClient = GuiService:IsTenFootInterface() and RobloxVersion:find("^1%.") ~= nil
+	local isMobileClient = RobloxVersion:find("^2%.") ~= nil
+	local hasVRHeadset = UserInputService.VREnabled and VRService.VREnabled
+	local isWindowsClient = GuiService.IsWindows
+	local hasAppleCharacter = isValidCharacter(0xF8FF)
 
-		return Enum.Platform.Windows
-	elseif Desktop then
-		return Enum.Platform.OSX
-	elseif Console then
-        -- GetStringForKeyCode
-		local ButtonSelect = lower(UserInputService:GetImageForKeyCode(Enum.KeyCode.ButtonSelect))
-	
-        if match(ButtonSelect, "ps4") then -- "rbxasset://textures/ui/Controls/PlayStationController/PS4/ButtonTouchpad@2x.png"
+    if isConsoleClient then
+		local hasXBoxController = ButtonSelectImage:find("xbox") ~= nil
+		local hasPS4Controller = ButtonSelectImage:find("ps4") ~= nil
+		local hasPS5Controller = ButtonSelectImage:find("ps5") ~= nil
+
+		if hasXBoxController or isWindowsClient then
+			return Enum.Platform.XboxOne
+        elseif hasPS4Controller then
 			return Enum.Platform.PS4
-		elseif match(ButtonSelect, "ps5") then -- "rbxasset://textures/ui/Controls/PlayStationController/PS5/ButtonShare@2x.png"
+		elseif hasPS5Controller then
 			return Enum.Platform.PS5
-		elseif match(ButtonSelect, "xbox") then -- "rbxasset://textures/ui/Controls/XboxController/ButtonSelect@2x.png"
-			return Enum.Platform.XboxOne -- game:FindFirstChild("OneStatFrame", true)?
 		end
-	elseif Mobile then
-		if VR then
+	elseif isMobileClient then
+		if isWindowsClient then
+			return Enum.Platform.UWP
+		elseif hasVRHeadset then
 			return Enum.Platform.MetaOS
-		elseif getArchitecture() == 32 or not isValidCharacter("\u{F8FF}") then
-			if not UserInputService.TouchEnabled then
-				return Enum.Platform.Linux -- Sober
-			end
-			
+		elseif hasAppleCharacter then
+			return Enum.Platform.IOS
+		elseif not UserInputService.TouchEnabled then
+			return Enum.Platform.Linux -- Sober (Linux)?
+		else
 			return Enum.Platform.Android
 		end
-		
-		return Enum.Platform.IOS
-	elseif VR then
-		-- Other VR platform IDK
+	elseif isDesktopClient then
+		if isWindowsClient then
+			return Enum.Platform.Windows
+		else
+			return Enum.Platform.OSX
+		end
 	end
 
 	return Enum.Platform.None
