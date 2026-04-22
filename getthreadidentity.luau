@@ -3,7 +3,7 @@ local HttpService = game:GetService("HttpService")
 
 function getthreadidentity(): number
 	local prefix = HttpService:GenerateGUID(false)
-	local runningCoroutine = coroutine.running() -- Capture the current thread
+	local runningCoroutine = coroutine.running()
 	local connection
 
 	connection = LogService.MessageOut:Connect(function(message)
