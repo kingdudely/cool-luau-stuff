@@ -1,3 +1,3 @@
 function getscripts()
-	return game:QueryDescendants("LuaSourceContainer") -- [Enabled = true],ModuleScript
+	return game:QueryDescendants("LuaSourceContainer")
 end
