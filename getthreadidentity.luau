@@ -1,23 +1,22 @@
 local LogService = game:GetService("LogService")
 local HttpService = game:GetService("HttpService")
 
-function getthreadidentity() : number
-	local bindableEvent = Instance.new("BindableEvent")
+function getthreadidentity(): number
 	local prefix = HttpService:GenerateGUID(false)
-	local messageOut
-	messageOut = LogService.MessageOut:Connect(function(message)
-		local _, prefixEnd = message:find(prefix, 1, true)
+	local runningCoroutine = coroutine.running() -- Capture the current thread
+	local connection
 
-		if prefixEnd then
-			messageOut:Disconnect()
-			local threadidentity = tonumber(message:match("%d+", prefixEnd + 1))
-			bindableEvent:Fire(threadidentity)
-			return
-		end
+	connection = LogService.MessageOut:Connect(function(message)
+		local _, prefixEnd = message:find(prefix, 1, true)
+		if not prefixEnd then return end
+
+		connection:Disconnect()
+		local threadidentity = tonumber(message:match("%d+", prefixEnd + 1))
+
+		task.spawn(runningCoroutine, threadidentity) 
 	end)
 
 	task.defer(printidentity, prefix)
-	local threadidentity = bindableEvent.Event:Wait()
-	bindableEvent:Destroy()
-	return threadidentity
+
+	return coroutine.yield()
 end
