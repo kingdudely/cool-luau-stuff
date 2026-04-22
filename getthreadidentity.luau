@@ -16,7 +16,7 @@ function getthreadidentity() : number
 		end
 	end)
 
-	printidentity(prefix)
+	task.defer(printidentity, prefix)
 	local threadidentity = bindableEvent.Event:Wait()
 	bindableEvent:Destroy()
 	return threadidentity
